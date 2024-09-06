@@ -2505,7 +2505,7 @@ class GitBase:
                             # Remove redundant 'ref' config for base saltenv
                             repo_obj.saltenv[saltenv].pop("ref")
                             if ref != repo_obj.base:
-                                log.warning(
+                                log.debug(
                                     "The 'base' environment has been "
                                     "defined in the 'saltenv' param for %s "
                                     "remote %s and will override the "
