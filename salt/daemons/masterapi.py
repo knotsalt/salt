@@ -226,6 +226,11 @@ def access_keys(opts):
     # Check other users matching ACL patterns
     if opts["client_acl_verify"] and HAS_PWD:
         log.profile("Beginning pwd.getpwall() call in masterapi access_keys function")
+
+        if opts.get("publisher_acl_auth_users"):
+            # Import distct list of authorized users
+            acl_users = set(opts["publisher_acl_auth_users"])
+            
         for user in pwd.getpwall():
             user = user.pw_name
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
