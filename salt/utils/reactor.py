@@ -461,6 +461,10 @@ class ReactWrap:
         """
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         """
+        if "runner" not in self.client_cache:
+            log.debug("reactor edge case: re-populating client_cache")
+            low = {"state": "runner"}
+            self.populate_client_cache(low)
         return self.pool.fire_async(self.client_cache["runner"].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
