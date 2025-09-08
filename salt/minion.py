@@ -3789,6 +3789,9 @@ class SyndicManager(MinionBase):
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
                 if data["jid"] not in self.jid_forward_cache:
+                    # Sleep a tunable amount of time before processing an event
+                    process_event_wait = self.opts.get("syndic_process_event_wait_ms", 50) * 0.001
+                    time.sleep(process_event_wait)
                     jdict["__load__"].update(self.mminion.returners[fstr](data["jid"]))
                     self.jid_forward_cache.add(data["jid"])
                     if (
