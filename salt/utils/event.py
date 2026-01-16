@@ -890,6 +890,8 @@ class SaltEvent:
             retcode = load["retcode"]
 
         try:
+            if not getattr(ret, "items", None):
+                return
             for tag, data in ret.items():
                 data["retcode"] = retcode
                 tags = tag.split("_|-")
@@ -914,6 +916,7 @@ class SaltEvent:
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
+            log.error(f"ret: {ret}")
 
     def fire_ret_load(self, load):
         """
