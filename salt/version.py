@@ -872,6 +872,7 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
 
     info = {
         "Salt Version": dict(salt_info),
+        "SEE Salt Release": {"Version": "v3006.23-fuji-0"},
         "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
@@ -904,6 +905,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
     info = []
     for ver_type in (
         "Salt Version",
+        "SEE Salt Release",
         "Python Version",
         "Dependency Versions",
         "Salt Extensions",
