@@ -857,6 +857,21 @@ def hypermedia_handler(*args, **kwargs):
     # handle as a data structure.
     try:
         cherrypy.response.processors = dict(ct_out_map)
+        if hasattr(cherrypy.serving.request, "unserialized_data"):
+            data = cherrypy.serving.request.unserialized_data
+            if isinstance(data, list):
+                for item in data:
+                    if isinstance(item, dict):
+                        tmp_dict = None
+                        if "password" in item:
+                            tmp_dict = dict(item)
+                            tmp_dict["password"] = "********"
+                        logger.info(tmp_dict or item)
+            if isinstance(data, dict):
+                if "password" in data:
+                    data = dict(data)
+                    data["password"] = "********"
+                logger.info("data: %s" % data)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
     except (
         salt.exceptions.AuthenticationError,
@@ -1892,6 +1907,7 @@ class Login(LowDataAdapter):
             raise cherrypy.HTTPError(401)
 
         # Mint token.
+        logger.info("user %s sucessfully authenticated" % username)
         token = self.auth.mk_token(creds)
         if "token" not in token:
             raise cherrypy.HTTPError(
