@@ -27,6 +27,58 @@ def store_job(opts, load, event=None, mminion=None):
     if mminion is None:
         mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
 
+    # When a minion-generated job (salt-call or scheduler) comes through this
+    # function to write the job to the cache, the expectation is that (since
+    # the job was not initiated from a master), it will not have a JID yet, and
+    # therefore the "jid" key in the payload will be set to "req"... a signal
+    # that prep_jid must be invoked to ask the master to create a JID. However,
+    # in cases where additional returners are specified by the minion for a
+    # given job, these additional returners are invoked before we get to this
+    # point.
+    #
+    # For any returner to save a job, a JID is required, so the use of
+    # additional returners by necessity will allocate a JID for the job.
+    # Therefore, in these cases where additional returners are specified, the
+    # payload entering this function will already have a JID (i.e. it will not
+    # be set to "req"). As a result, the "arg", "tgt_type", and "tgt" values
+    # will not be added to the payload before it is written to the job cache.
+    #
+    # This is a problem; in the default master_job_cache backend (local_cache),
+    # when the "save_load" func is invoked to write the payload to disk, it
+    # checks the payload for a "tgt" value. If present, then the master will
+    # find the minions matching that target, and write a list of minions to the
+    # job cache in a file called ".minions.p". For reference, here is where
+    # this happens:
+    #
+    # https://github.com/saltstack/salt/blob/v3006.6/salt/returners/local_cache.py#L218-L227
+    #
+    # The reason for conditionally writing this file is that the results of
+    # runner functions executed via salt-run are also written to the job cache,
+    # but as runners are executed master-side, they do not involve a minion
+    # target, and thus ".minions.p" is irrelevant.
+    #
+    # However, the absence of a ".minions.p" breaks Salt's ability to look up
+    # results for the JID, as these lookups require this file to be present,
+    # which you can see here:
+    #
+    # https://github.com/saltstack/salt/blob/v3006.6/salt/returners/local_cache.py#L306-L312
+    #
+    # The absence of this file results in a traceback on any job cache lookups
+    # for this JID, which in turn impedes the syndic's ability to forward
+    # results for the job to the syndic_master.
+    #
+    # Long story long, this is a bug in Salt. There is likely a more elegant
+    # fix, but for our purposes, the following block of code will ensure that
+    # these keys are present in the payload.
+    #
+    if load["jid"] != "req":
+        if "arg" not in load:
+            load["arg"] = load.get("fun_args", [])
+        if "tgt_type" not in load:
+            load["tgt_type"] = "glob"
+        if "tgt" not in load:
+            load["tgt"] = load["id"]
+
     job_cache = opts["master_job_cache"]
     if load["jid"] == "req":
         # The minion is returning a standalone job, request a jobid
